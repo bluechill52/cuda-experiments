@@ -108,6 +108,7 @@ int main() {
 
     CUDA_CHECK(cudaMemcpy(dA, A, sA, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dB, B, sB, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemset(dC, 0, sC));
 
     dim3 blockDim(32, 32, 1);
     dim3 gridDim((M + blockDim.x - 1) / blockDim.y, (N + blockDim.y - 1) / blockDim.y);

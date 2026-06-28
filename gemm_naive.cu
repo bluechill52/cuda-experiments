@@ -28,6 +28,14 @@ __global__ void gemm_naive(float* A, float* B, float* C, int M, int K, int N) {
     }
 }
 
+void init_matrix(float* matrix, int num_rows, int num_cols) {
+    for(int i=0;i<num_rows;i++) {
+        for(int j=0;j<num_cols;j++) {
+            matrix[i * num_cols + j] = rand() % 100;
+        }
+    }
+}
+
 void print_matrix(float* matrix, int num_rows, int num_cols) {
     for(int i=0;i<num_rows;i++) {
         for(int j=0;j<num_cols;j++) {
@@ -62,9 +70,9 @@ bool verify(float* A, float* B, float* C, int M, int K, int N) {
 }
 
 int main() {
-    int M = 4096;
-    int K = 4096;
-    int N = 4096;
+    int M = 1024;
+    int K = 1024;
+    int N = 1024;
 
     size_t sA = sizeof(float) * M * K;
     size_t sB = sizeof(float) * K * N;
@@ -74,17 +82,8 @@ int main() {
     float* B = (float*) malloc(sB);
     float* C = (float*) malloc(sC);
 
-    for(int i=0;i<M;i++) {
-        for(int j=0;j<K;j++) {
-            A[i * K + j] = i * K + j;
-        }
-    }
-
-    for(int i=0;i<K;i++) {
-        for(int j=0;j<N;j++) {
-            B[i * N + j] = i * N + j + 1;
-        }
-    }
+    init_matrix(A, M, K);
+    init_matrix(B, K, N);
 
     /*
     for(int i=0;i<M;i++) {

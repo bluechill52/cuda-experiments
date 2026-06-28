@@ -62,9 +62,9 @@ bool verify(float* A, float* B, float* C, int M, int K, int N) {
 }
 
 int main() {
-    int M = 1024;
-    int K = 1024;
-    int N = 1024;
+    int M = 4096;
+    int K = 4096;
+    int N = 4096;
 
     size_t sA = sizeof(float) * M * K;
     size_t sB = sizeof(float) * K * N;
@@ -113,7 +113,19 @@ int main() {
     dim3 blockDim(32, 32, 1);
     dim3 gridDim((M + blockDim.x - 1) / blockDim.y, (N + blockDim.y - 1) / blockDim.y);
 
+    cudaEvent_t start, stop;
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
+
+    // Warp up launch
     gemm_naive<<<gridDim, blockDim>>>(dA, dB, dC, M, K, N);
+    CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaMemset(dC, 0, sC));  // reset accumulator after warm-up
+
+    // Main run
+    CUDA_CHECK(cudaEventRecord(start));
+    gemm_naive<<<gridDim, blockDim>>>(dA, dB, dC, M, K, N);
+    CUDA_CHECK(cudaEventRecord(stop));
     cudaDeviceSynchronize();
     cudaError_t err{cudaGetLastError()};
     if (err != cudaSuccess)
@@ -124,9 +136,24 @@ int main() {
         std::exit(EXIT_FAILURE);
     }
 
+    // Find time elapsed running the kernel - this should be before memcpy from device to host
+    float kernelTimeMs;
+    CUDA_CHECK(cudaEventElapsedTime(&kernelTimeMs, start, stop));
     CUDA_CHECK(cudaMemcpy(C, dC, sC, cudaMemcpyDeviceToHost));
 
+    std::cout << "Kernel running time " << kernelTimeMs << std::endl;
     std::cout << (verify(A, B, C, M, K, N) ? \
                 "CUDA computed matrix matches with reference" : \
                 "Mismatch between CUDA computed matrix and reference") << std::endl;
+    
+    // Clean up
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+    cudaFree(dA);
+    cudaFree(dB);
+    cudaFree(dC);
+    free(A);
+    free(B);
+    free(C);
+    return 0;
 }
